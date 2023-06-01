@@ -1,3 +1,4 @@
+const express = require("express");
 const fetch = require("node-fetch");
 const TelegramBot = require("node-telegram-bot-api");
 const mongoose = require("mongoose");
@@ -5,6 +6,7 @@ require('dotenv').config();
 
 const mongoURI = process.env.MONGO_URI;
 const token = process.env.TELEGRAM_TOKEN; // Replace with your Telegram bot token
+const webhookUrl = process.env.WEBHOOK_URL; // Replace with your webhook URL
 
 // Connect to MongoDB
 mongoose
@@ -30,7 +32,22 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 // Create a new Telegram bot
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token);
+
+// Create an Express app
+const app = express();
+app.use(express.json());
+
+// Set up the webhook route
+app.post(`/webhook/${token}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// Start the Express server
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Express server is running on port 3000");
+});
 
 // Start the bot and handle /start command
 function startBot() {
@@ -169,8 +186,9 @@ function startBot() {
     }
   }, 60 * 60 * 1000); // Check every hour
 
+  // Set up the webhook
+  bot.setWebHook(`${webhookUrl}/webhook/${token}`);
+
   // Start the bot
-  bot.on("polling_error", (error) => {
-    console.log("Polling error:", error);
-  });
+  console.log("Bot is running with webhooks");
 }
